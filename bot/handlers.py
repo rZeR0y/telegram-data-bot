@@ -103,3 +103,20 @@ async def trend_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(formatters.format_trend(data))
     except Exception as e:
         await update.message.reply_text(f"⚠️ 数据查询异常，请稍后重试\n({e})")
+
+
+async def ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """自然语言消息 → AI 分析"""
+    if not _is_allowed(update):
+        return
+    text = update.message.text
+    if not text or text.startswith("/"):
+        return
+
+    await update.message.reply_text("思考中...")
+    try:
+        from bot.ai import ask_glm
+        reply = await ask_glm(text)
+        await update.message.reply_text(reply)
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ AI 分析失败\n({e})")

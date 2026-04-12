@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     ALLOWED_CHAT_IDS: str = ""
     REPORT_CHAT_ID: str = ""
+    GLM_API_KEY: str = ""
 
     @property
     def allowed_chat_ids(self) -> List[int]:
