@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram_data_bot
+    env_file: .env
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - rawx-net
+
+networks:
+  rawx-net:
+    external: true
+    name: rawx-dao-app_rawx-net
