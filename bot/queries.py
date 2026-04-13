@@ -229,6 +229,34 @@ async def portfolio_by_name(session: AsyncSession, name: str) -> list[dict] | No
     return results
 
 
+async def signed_students_status(session: AsyncSession) -> list[dict]:
+    """已签约学生的跟进日志 + 作品集概览"""
+    leads = await _fetch_leads(session)
+    results = []
+    for lead in leads:
+        if not _is_signed(lead):
+            continue
+        lead_id = lead["id"]
+        logs = await _fetch_action_logs(session, lead_id, limit=3)
+        portfolios = await _fetch_portfolios(session, lead_id)
+        results.append({
+            "name": lead.get("user_name"),
+            "signing_date": lead.get("signing_date"),
+            "signing_amount": lead.get("signing_amount"),
+            "responsible_person": lead.get("responsible_person"),
+            "recent_logs": [
+                {"content": log.get("content"), "created_at": str(log.get("created_at", ""))}
+                for log in logs
+            ],
+            "portfolio_count": len(portfolios),
+            "portfolios": [
+                {"title": p.get("title"), "status": p.get("status"), "updated_at": str(p.get("updated_at", ""))}
+                for p in portfolios[:5]
+            ],
+        })
+    return results
+
+
 async def trend_7days(session: AsyncSession) -> list[dict]:
     """近7天每日趋势"""
     leads = await _fetch_leads(session)

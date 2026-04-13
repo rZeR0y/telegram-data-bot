@@ -74,6 +74,11 @@ async def _gather_context(message: str) -> str:
             trend = await queries.trend_7days(session)
             context_parts.append(f"【近7天趋势】\n{json.dumps(trend, ensure_ascii=False, default=str)}")
 
+        # 如果问题涉及跟进/作品集（且未通过人名命中）
+        if any(kw in message for kw in ["跟进", "日志", "跟踪", "回访", "跟进情况", "作品集", "作品", "进度"]):
+            status = await queries.signed_students_status(session)
+            context_parts.append(f"【已签约学生跟进&作品集】\n{json.dumps(status, ensure_ascii=False, default=str)[:4000]}")
+
     return "\n\n".join(context_parts)
 
 
