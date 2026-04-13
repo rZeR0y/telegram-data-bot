@@ -30,10 +30,13 @@ def _parse_amount(raw: str | None) -> float:
 
 
 def _is_signed(row: dict) -> bool:
-    """判断 crm_leads 行是否已签约"""
+    """判断 crm_leads 行是否已签约：signing_date+signing_amount 或 consultation_stage 含签约"""
     sd = row.get("signing_date")
     sa = row.get("signing_amount")
-    return bool(sd and str(sd).strip()) and bool(sa and str(sa).strip() and str(sa).strip() != "0")
+    has_signing = bool(sd and str(sd).strip()) and bool(sa and str(sa).strip() and str(sa).strip() != "0")
+    stage = str(row.get("consultation_stage") or "").strip()
+    has_stage = "签约" in stage
+    return has_signing or has_stage
 
 
 def _parse_date(date_str: str | None) -> date | None:
