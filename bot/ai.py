@@ -50,39 +50,37 @@ def _get_client() -> AsyncOpenAI:
 
 async def _gather_context(message: str) -> str:
     """根据用户消息提取数据上下文"""
+    import re
     context_parts = []
+    name_found = False
+
     async with async_session() as session:
         # 始终带上日报数据作为背景
         report = await queries.daily_report(session)
         context_parts.append(f"【当前日报数据】\n{json.dumps(report, ensure_ascii=False, default=str)}")
 
-        # 尝试提取人名搜索（中文姓名 2-4 字）
-        import re
+        # 提取人名搜索（中文姓名 2-4 字）→ 跟 /s 命令同款流程
         names = re.findall(r"[\u4e00-\u9fff]{2,4}", message)
         for name in names:
-            # 先按学生名搜
             result = await queries.search_student(session, name)
             if result:
-                context_parts.append(f"【搜索: {name}（学生）】\n{json.dumps(result, ensure_ascii=False, default=str)[:3000]}")
-            # 再按负责人搜（该销售负责的所有签约学生跟进+作品集）
-            status = await queries.signed_students_status(session, person=name)
-            if status:
-                context_parts.append(f"【{name} 负责的签约学生跟进&作品集】\n{json.dumps(status, ensure_ascii=False, default=str)[:4000]}")
+                context_parts.append(f"【学生数据: {name}】\n{json.dumps(result, ensure_ascii=False, default=str)}")
+                name_found = True
+                break  # 命中一个就够了，避免数据过载
 
-        # 如果问题涉及排行
-        if any(kw in message for kw in ["排行", "排名", "销售", "业绩", "签约"]):
-            rank = await queries.sales_rank(session)
-            context_parts.append(f"【本月销售排行】\n{json.dumps(rank, ensure_ascii=False)}")
+        # 以下只在未命中人名时补充
+        if not name_found:
+            if any(kw in message for kw in ["排行", "排名", "销售", "业绩", "签约"]):
+                rank = await queries.sales_rank(session)
+                context_parts.append(f"【本月销售排行】\n{json.dumps(rank, ensure_ascii=False)}")
 
-        # 如果问题涉及趋势
-        if any(kw in message for kw in ["趋势", "走势", "最近", "这几天", "这周"]):
-            trend = await queries.trend_7days(session)
-            context_parts.append(f"【近7天趋势】\n{json.dumps(trend, ensure_ascii=False, default=str)}")
+            if any(kw in message for kw in ["趋势", "走势", "最近", "这几天", "这周"]):
+                trend = await queries.trend_7days(session)
+                context_parts.append(f"【近7天趋势】\n{json.dumps(trend, ensure_ascii=False, default=str)}")
 
-        # 如果问题涉及跟进/作品集（且未通过人名命中）
-        if any(kw in message for kw in ["跟进", "日志", "跟踪", "回访", "跟进情况", "作品集", "作品", "进度"]):
-            status = await queries.signed_students_status(session)
-            context_parts.append(f"【已签约学生跟进&作品集】\n{json.dumps(status, ensure_ascii=False, default=str)[:4000]}")
+            if any(kw in message for kw in ["跟进", "日志", "跟踪", "回访", "作品集", "作品", "进度"]):
+                status = await queries.signed_students_status(session)
+                context_parts.append(f"【学生跟进&作品集概览】\n{json.dumps(status, ensure_ascii=False, default=str)[:4000]}")
 
     return "\n\n".join(context_parts)
 
