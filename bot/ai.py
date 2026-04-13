@@ -59,10 +59,25 @@ async def _gather_context(message: str) -> str:
         report = await queries.daily_report(session)
         context_parts.append(f"【当前日报数据】\n{json.dumps(report, ensure_ascii=False, default=str)}")
 
-        # 提取人名搜索（中文姓名 2-4 字）→ 跟 /s 命令同款流程
-        names = re.findall(r"[\u4e00-\u9fff]{2,4}", message)
+        # 提取人名：先去掉助词/介词，再用 bigram/trigram 匹配
+        clean_msg = re.sub(r"[的了吗在有着把被让给向从与和跟跟看查搜问]", " ", message)
+        # 提取连续中文段
+        chunks = re.findall(r"[\u4e00-\u9fff]{2,6}", clean_msg)
+        # 过滤掉常见业务词
+        stop_words = {"跟进", "跟进情", "跟进情况", "作品集", "作品", "签约", "排行", "排名",
+                      "负责", "最近", "趋势", "情况", "报告", "数据", "销售", "业绩",
+                      "记录", "日志", "跟踪", "回访", "进度", "分析", "概览", "明细",
+                      "怎么样", "怎么样了", "如何"}
+        candidates = [c for c in chunks if c not in stop_words]
+        # 优先尝试 2-4 字短名（人名），超长的可能是句子片段
+        names = sorted(candidates, key=len)
+        if names and len(names[0]) > 4:
+            # 所有候选都太长，尝试取前3字、后3字
+            names = [n[:3] for n in names if len(n) >= 3][:3]
+        logger.info(f"AI search: extracted names={names} from message={repr(message[:50])}")
         for name in names:
             result = await queries.search_student(session, name)
+            logger.info(f"AI search: name={name}, result={'found' if result else 'None'}")
             if result:
                 context_parts.append(f"【学生数据: {name}】\n{json.dumps(result, ensure_ascii=False, default=str)}")
                 name_found = True
