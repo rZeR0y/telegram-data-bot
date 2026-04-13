@@ -229,12 +229,14 @@ async def portfolio_by_name(session: AsyncSession, name: str) -> list[dict] | No
     return results
 
 
-async def signed_students_status(session: AsyncSession) -> list[dict]:
-    """已签约学生的跟进日志 + 作品集概览"""
+async def signed_students_status(session: AsyncSession, person: str | None = None) -> list[dict]:
+    """已签约学生的跟进日志 + 作品集概览，可按负责人筛选"""
     leads = await _fetch_leads(session)
     results = []
     for lead in leads:
         if not _is_signed(lead):
+            continue
+        if person and (lead.get("responsible_person") or "") != person:
             continue
         lead_id = lead["id"]
         logs = await _fetch_action_logs(session, lead_id, limit=3)

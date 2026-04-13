@@ -60,9 +60,14 @@ async def _gather_context(message: str) -> str:
         import re
         names = re.findall(r"[\u4e00-\u9fff]{2,4}", message)
         for name in names:
+            # 先按学生名搜
             result = await queries.search_student(session, name)
             if result:
-                context_parts.append(f"【搜索: {name}】\n{json.dumps(result, ensure_ascii=False, default=str)[:2000]}")
+                context_parts.append(f"【搜索: {name}（学生）】\n{json.dumps(result, ensure_ascii=False, default=str)[:2000]}")
+            # 再按负责人搜（该销售负责的所有签约学生跟进+作品集）
+            status = await queries.signed_students_status(session, person=name)
+            if status:
+                context_parts.append(f"【{name} 负责的签约学生跟进&作品集】\n{json.dumps(status, ensure_ascii=False, default=str)[:4000]}")
 
         # 如果问题涉及排行
         if any(kw in message for kw in ["排行", "排名", "销售", "业绩", "签约"]):
