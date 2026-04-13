@@ -230,12 +230,10 @@ async def portfolio_by_name(session: AsyncSession, name: str) -> list[dict] | No
 
 
 async def signed_students_status(session: AsyncSession, person: str | None = None) -> list[dict]:
-    """已签约学生的跟进日志 + 作品集概览，可按负责人筛选（模糊匹配）"""
+    """学生的跟进日志 + 作品集概览，可按负责人筛选（模糊匹配），包含签约和未签约"""
     leads = await _fetch_leads(session)
     results = []
     for lead in leads:
-        if not _is_signed(lead):
-            continue
         if person and person not in (lead.get("responsible_person") or ""):
             continue
         lead_id = lead["id"]

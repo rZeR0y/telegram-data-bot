@@ -63,7 +63,7 @@ async def _gather_context(message: str) -> str:
             # 先按学生名搜
             result = await queries.search_student(session, name)
             if result:
-                context_parts.append(f"【搜索: {name}（学生）】\n{json.dumps(result, ensure_ascii=False, default=str)[:2000]}")
+                context_parts.append(f"【搜索: {name}（学生）】\n{json.dumps(result, ensure_ascii=False, default=str)[:3000]}")
             # 再按负责人搜（该销售负责的所有签约学生跟进+作品集）
             status = await queries.signed_students_status(session, person=name)
             if status:
