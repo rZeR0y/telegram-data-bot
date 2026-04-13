@@ -29,7 +29,8 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/s 姓名 — 搜索学生\n"
         "/k — 本月销售排行\n"
         "/p 姓名 — 作品集\n"
-        "/t — 近7天趋势"
+        "/t — 近7天趋势\n"
+        "/d — 今日跟进&作品集动态"
     )
 
 
@@ -101,6 +102,22 @@ async def trend_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         async with async_session() as session:
             data = await queries.trend_7days(session)
         await update.message.reply_text(formatters.format_trend(data))
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ 数据查询异常，请稍后重试\n({e})")
+
+
+async def today_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """今日跟进日志 + 作品集动态"""
+    if not _is_allowed(update):
+        return
+    try:
+        async with async_session() as session:
+            data = await queries.today_updates(session)
+        text = formatters.format_today_updates(data)
+        if not text:
+            await update.message.reply_text("📋 今日暂无新增跟进日志和作品集")
+        else:
+            await update.message.reply_text(text)
     except Exception as e:
         await update.message.reply_text(f"⚠️ 数据查询异常，请稍后重试\n({e})")
 

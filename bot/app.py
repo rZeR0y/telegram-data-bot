@@ -12,7 +12,7 @@ from bot.config import settings
 from bot.database import async_session
 from telegram.ext import MessageHandler, filters
 
-from bot.handlers import start_cmd, help_cmd, report_cmd, search_cmd, rank_cmd, portfolio_cmd, trend_cmd, ai_message
+from bot.handlers import start_cmd, help_cmd, report_cmd, search_cmd, rank_cmd, portfolio_cmd, trend_cmd, today_cmd, ai_message
 from bot.scheduler import setup_scheduler
 from bot import queries, formatters
 
@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
     bot_app.add_handler(CommandHandler("k", rank_cmd))
     bot_app.add_handler(CommandHandler("p", portfolio_cmd))
     bot_app.add_handler(CommandHandler("t", trend_cmd))
+    bot_app.add_handler(CommandHandler("d", today_cmd))
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_message))
 
     await bot_app.initialize()
@@ -134,6 +135,17 @@ async def api_trend():
         async with async_session() as session:
             data = await queries.trend_7days(session)
         return {"trend": data}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/today")
+async def api_today():
+    """今日跟进日志 + 作品集动态"""
+    try:
+        async with async_session() as session:
+            data = await queries.today_updates(session)
+        return data
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 

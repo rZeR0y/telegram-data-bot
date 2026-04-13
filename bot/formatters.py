@@ -175,6 +175,51 @@ def format_portfolios(results: list[dict]) -> str:
     return "\n\n".join(parts)
 
 
+def format_today_updates(data: dict) -> str:
+    """格式化今日动态（跟进日志 + 作品集）"""
+    logs = data.get("logs", [])
+    portfolios = data.get("portfolios", [])
+
+    if not logs and not portfolios:
+        return ""
+
+    today = date.today().isoformat()
+    lines = [f"📋 今日动态 ({today})", ""]
+
+    if logs:
+        lines.append(f"📝 跟进日志（{len(logs)}条）")
+        # 按负责人分组
+        by_person = {}
+        for log in logs:
+            person = log.get("responsible_person") or "未分配"
+            by_person.setdefault(person, []).append(log)
+        for person, person_logs in by_person.items():
+            lines.append(f"  [{person}]")
+            for log in person_logs:
+                student = log.get("student", "?")
+                log_type = log.get("log_type", "")
+                note = log.get("note", "")
+                type_tag = f"[{log_type}] " if log_type else ""
+                # 截断过长内容
+                if len(note) > 80:
+                    note = note[:80] + "..."
+                lines.append(f"    {student} — {type_tag}{note}")
+        lines.append("")
+
+    if portfolios:
+        lines.append(f"📂 新增作品集（{len(portfolios)}份）")
+        for pf in portfolios:
+            student = pf.get("student", "?")
+            title = pf.get("title", "未命名")
+            wtype = pf.get("work_type", "")
+            status = pf.get("review_status", "")
+            meta = [x for x in [wtype, status] if x]
+            meta_str = f" ({' / '.join(meta)})" if meta else ""
+            lines.append(f"  {student} — {title}{meta_str}")
+
+    return "\n".join(lines)
+
+
 def format_trend(days: list[dict]) -> str:
     """格式化趋势"""
     lines = ["📈 近7天趋势", ""]

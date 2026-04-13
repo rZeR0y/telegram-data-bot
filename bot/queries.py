@@ -260,6 +260,57 @@ async def signed_students_status(session: AsyncSession, person: str | None = Non
     return results
 
 
+async def today_updates(session: AsyncSession) -> dict:
+    """今日新增的跟进日志和作品集"""
+    today = _today()
+
+    # 今日跟进日志 — 关联 crm_leads 拿学生名
+    log_rows = await session.execute(
+        text("""
+            SELECT al.*, cl.user_name, cl.responsible_person
+            FROM action_logs al
+            JOIN crm_leads cl ON cl.id = al.user_id
+            WHERE al.log_date = :today
+            ORDER BY cl.responsible_person, al.created_at DESC
+        """),
+        {"today": today},
+    )
+    logs = []
+    for row in log_rows.fetchall():
+        d = dict(row._mapping)
+        logs.append({
+            "student": d.get("user_name"),
+            "responsible_person": d.get("responsible_person"),
+            "log_type": d.get("log_type"),
+            "note": (d.get("note") or "")[:200],
+            "log_date": str(d.get("log_date", "")),
+        })
+
+    # 今日新增作品集
+    pf_rows = await session.execute(
+        text("""
+            SELECT p.*, cl.user_name, cl.responsible_person
+            FROM portfolios p
+            JOIN crm_leads cl ON cl.id = p.user_id
+            WHERE p.created_at::date = :today
+            ORDER BY cl.responsible_person, p.created_at DESC
+        """),
+        {"today": today},
+    )
+    portfolios = []
+    for row in pf_rows.fetchall():
+        d = dict(row._mapping)
+        portfolios.append({
+            "student": d.get("user_name"),
+            "responsible_person": d.get("responsible_person"),
+            "title": d.get("title"),
+            "work_type": d.get("work_type"),
+            "review_status": d.get("review_status"),
+        })
+
+    return {"logs": logs, "portfolios": portfolios}
+
+
 async def trend_7days(session: AsyncSession) -> list[dict]:
     """近7天每日趋势"""
     leads = await _fetch_leads(session)
